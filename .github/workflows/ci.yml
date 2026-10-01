@@ -16,7 +16,7 @@ jobs:
         os: [macos-15, macos-15-intel]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - uses: oven-sh/setup-bun@v2
         with:
@@ -48,7 +48,7 @@ jobs:
           ./dist/dmngr-darwin-$ARCH --version
           DMNGR_APP_SUPPORT_DIR="$RUNNER_TEMP/dmngr-smoke" ./dist/dmngr-darwin-$ARCH list --json
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: dmngr-binaries-${{ matrix.os }}
           path: dist/dmngr-darwin-*

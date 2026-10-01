@@ -15,6 +15,7 @@ tags: [change, ci-fixes, tasks]
 | 4 | Unit tests for the `impossible` branch | 3 | `bun test tests/unit` | done |
 | 5 | Docs + CHANGELOG entry | 3, 4 | docs link/frontmatter check | done |
 | 6 | Full local verification and push | 5 | `bun run typecheck && DMNGR_INTEGRATION=1 bun test tests/integration` then watch the CI run | done |
+| 7 | Bump workflow actions to the current majors (Node 20 deprecation warning) | 6 | inputs checked against each action's `action.yml`; green CI run | done |
 
 ## Results
 
@@ -33,6 +34,12 @@ tags: [change, ci-fixes, tasks]
 - `bun run typecheck` clean; `bun test tests/unit` → 132 pass (was 131); `DMNGR_INTEGRATION=1 bun test
   tests/integration` → 21 pass, 1 skipped (root-only PKG install).
 - Documentation check → all `knowledge/` documents keep frontmatter and resolvable relative links.
+
+- Actions bumped and verified: the inputs used by the workflows (`ref`, `fetch-depth`, `name`, `path`,
+  `if-no-files-found`, `tag_name`, `body_path`, `files`, `draft`, `generate_release_notes`) all exist in
+  the new majors, confirmed against each action's `action.yml` at the pinned tag.
+- The green CI run after the bump is the evidence for this item; the release workflow's publish step can
+  only be re-exercised by the next release (its inputs were verified statically).
 
 Limitations:
 

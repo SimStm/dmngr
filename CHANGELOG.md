@@ -37,6 +37,8 @@ The human-facing usage guide stays in the pt-BR [`README.md`](./README.md).
 
 ### Changed
 
+- GitHub Actions bumped to their current majors (`actions/checkout@v7`, `actions/upload-artifact@v7`,
+  `softprops/action-gh-release@v3`); the runners had started forcing the previous majors onto Node.js 24.
 - `dmngr -V` was replaced by `dmngr -v` (the CLI had no published release yet); `--version` keeps working.
 - CI runs on `macos-15` (arm64) and `macos-15-intel`, since GitHub retired the `macos-13` image; the
   native binary is smoke-tested on each runner.

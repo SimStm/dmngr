@@ -37,6 +37,9 @@ explicitly pinned assets.
   throws an `InstallError` (exit 6) with a message that cannot be waived by any flag.
 - Unit tests for the new branch, keeping the existing ones honest.
 - Bundle, product/rule check, `CHANGELOG.md` entry.
+- Bump the GitHub Actions used by the workflows to their current majors
+  (`actions/checkout@v7`, `actions/upload-artifact@v7`, `softprops/action-gh-release@v3`), since the
+  runners warned that `@v4`/`@v2` were being forced onto Node.js 24.
 
 ### Out of scope
 
