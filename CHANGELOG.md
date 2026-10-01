@@ -8,6 +8,17 @@ The human-facing usage guide stays in the pt-BR [`README.md`](./README.md).
 
 ## [Unreleased]
 
+### Fixed
+
+- Pinning an asset for the wrong architecture (`--pin` with an arm64 build on an Intel Mac) now fails
+  before the download with exit code 6 and a message naming the asset, instead of surfacing a signature
+  error later. The pre-download architecture gate covers every asset path (explicit name, saved pattern,
+  heuristic), not only the heuristic one.
+- Unit tests use a 30 s default timeout (`bunfig.toml` + `tests/helpers/setup.ts`): the first
+  `codesign`/`lipo`/`plutil` call on a freshly created CI runner is much slower than on a warm Mac, and
+  the 5 s Bun default produced a false timeout on the arm64 runner.
+  → [`knowledge/changes/2026-10-01/ci-fixes-arch-gate-and-timeout/`](./knowledge/changes/2026-10-01/ci-fixes-arch-gate-and-timeout/README.md)
+
 ## [0.2.0] - 2026-10-01
 
 ### Added

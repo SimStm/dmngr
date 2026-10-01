@@ -1,0 +1,4 @@
+[test]
+# Testes que assinam/inspectionam bundles pagam o custo do primeiro `codesign`/`lipo`/`plutil`
+# num runner recém-criado (cold start). O padrão de 5s do Bun é apertado demais para CI.
+preload = ["./tests/helpers/setup.ts"]

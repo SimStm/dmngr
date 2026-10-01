@@ -51,9 +51,11 @@ UDIF DMG (`encrcdsa` = encrypted, unsupported), `PK\x03\x04` = ZIP (unsupported 
    (interactive) or exits with code 3.
 3. Identity and version come from `Contents/Info.plist` (`plutil -convert json`), architecture from
    `lipo -archs`.
-4. Before anything is copied, `checkBundleArchitecture()` validates the real bundle slices
-   (`lipo -archs`) against this machine: arm64-on-Intel blocks, x64-on-Apple-Silicon requires Rosetta 2
-   and an explicit acceptance (recorded as `arch-mismatch`).
+4. `handleArchConcern()` gates the machine architecture **before the download** for every asset path —
+   explicit asset name (`--pin` or a download URL), saved pattern or heuristic: arm64-on-Intel throws
+   with exit 6 and cannot be waived, x64-on-Apple-Silicon requires Rosetta 2 plus an explicit
+   acceptance. After the download, `checkBundleArchitecture()` repeats the decision with the real bundle
+   slices (`lipo -archs`), catching names that lied.
 5. `installAppBundle()` (`src/core/install/app-swap.ts`) copies with `ditto` into
    `.dmngr-staging-<rand>` **inside the destination directory** (same filesystem), runs the
    `beforeCommit` verification hook (identity re-read, `codesign --verify --strict`, `spctl`), moves

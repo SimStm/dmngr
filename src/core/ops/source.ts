@@ -35,9 +35,12 @@ export interface ChannelDecisionInfo {
   pinnedIsNewer: boolean;
 }
 
-/** Preocupação de arquitetura detectada antes do download (o bundle é validado depois). */
+/**
+ * Preocupação de arquitetura detectada antes do download (o bundle é validado depois).
+ * `impossible` nunca é dispensável: um app arm64 não roda em Mac Intel.
+ */
 export interface AssetArchConcern {
-  kind: "needs-rosetta" | "unknown";
+  kind: "needs-rosetta" | "unknown" | "impossible";
   assetName: string;
   assetArch: AssetArch;
 }
@@ -242,6 +245,10 @@ async function resolveGithub(ctx: Ctx, input: ParsedInput, ref: GithubRef, optio
 export function assetArchConcern(asset: GithubAsset, machineArch: MachineArch, notes?: string[]): AssetArchConcern | null {
   const assetArch = classifyArchName(asset.name);
   const compatibility = archCompatibility(assetArch, machineArch);
+  if (compatibility === "impossible") {
+    notes?.push(`${asset.name} é ${describeAssetArch(assetArch)} e esta máquina é ${humanArch(machineArch)}: não roda aqui`);
+    return { kind: "impossible", assetName: asset.name, assetArch };
+  }
   if (compatibility === "needs-rosetta") {
     notes?.push(`${asset.name} é ${describeAssetArch(assetArch)} e esta máquina é ${humanArch(machineArch)}: depende do Rosetta 2`);
     return { kind: "needs-rosetta", assetName: asset.name, assetArch };

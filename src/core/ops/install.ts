@@ -128,6 +128,16 @@ export async function handleArchConcern(ctx: Ctx, resolved: ResolvedSource): Pro
     return { acceptedMismatch: false, overrides: [] };
   }
 
+  if (concern.kind === "impossible") {
+    throw new InstallError(
+      `${concern.assetName} é ${describeAssetArch(concern.assetArch)} e esta máquina é ${humanArch(machine)}: não roda aqui`,
+      {
+        hint: "escolha um build nativo ou universal (nenhuma flag dispensa este caso)",
+        details: { asset: concern.assetName, assetArch: concern.assetArch, machineArch: machine },
+      },
+    );
+  }
+
   const rosetta = await rosettaAvailable();
   if (!rosetta) {
     throw new InstallError(

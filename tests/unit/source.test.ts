@@ -196,6 +196,19 @@ describe("resolveSourceForInput com canal e pin", () => {
     await expect(resolveSourceForInput(ctx, input, options)).rejects.toThrow(InstallError);
   });
 
+  test("asset arm64 fixado por --pin em Mac Intel falha antes do download", async () => {
+    const ctx = fakeCtx({
+      stable: "v1.0.0",
+      stableAssets: [{ name: "Editor-arm64.dmg" }],
+      pinnedTag: "v1.0.0",
+      pinnedAssets: [{ name: "Editor-arm64.dmg" }],
+    });
+    const input = await classifyInput("https://github.com/acme/editor/releases/download/v1.0.0/Editor-arm64.dmg");
+    const resolved = await resolveSourceForInput(ctx, input, { ...options, machineArch: "x64", pin: true });
+    expect(resolved.assetName).toBe("Editor-arm64.dmg");
+    expect(resolved.archConcern?.kind).toBe("impossible");
+  });
+
   test("--pin exige uma URL que fixe versão; --pin + --latest é erro de uso", async () => {
     const ctx = fakeCtx({ stable: "v1.0.0", stableAssets: [{ name: "Editor-arm64.dmg" }] });
     const page = await classifyInput("https://github.com/acme/editor");
@@ -236,6 +249,8 @@ describe("helpers de canal e arquitetura", () => {
     });
     expect(assetArchConcern(asset("App-x64.dmg"), "arm64")?.kind).toBe("needs-rosetta");
     expect(assetArchConcern(asset("App-arm64.dmg"), "arm64")).toBeNull();
+    expect(assetArchConcern(asset("App-arm64.dmg"), "x64")?.kind).toBe("impossible");
+    expect(assetArchConcern(asset("App-x64.dmg"), "x64")).toBeNull();
     expect(assetArchConcern(asset("Stats.dmg"), "arm64")?.kind).toBe("unknown");
     expect(assetArchConcern(asset("App-universal.dmg"), "arm64")).toBeNull();
   });
