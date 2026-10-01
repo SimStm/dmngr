@@ -1,0 +1,162 @@
+name: Release
+
+# Creates a release from one click (Actions → Release → Run workflow) or from a
+# tag push (`vX.Y.Z`).
+#
+# Manual run:  bumps the version in package.json + src/version.ts, promotes the
+#              CHANGELOG [Unreleased] section to `## [X.Y.Z] - <date>`, commits
+#              `chore(release): vX.Y.Z [skip ci]`, tags and pushes, builds both
+#              architectures, writes checksums and publishes the release with the
+#              changelog section as its description.
+# Tag push:    releases an already-bumped version; the tag must match the files.
+#
+# Requires "Read and write permissions" for the workflow token (contents: write
+# is requested below). The release commit is pushed to the checked-out branch,
+# so branch protection rules must allow it (or the push must be done by a user).
+
+on:
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: "Version bump for this release"
+        type: choice
+        options: [patch, minor, major]
+        default: patch
+      dry_run:
+        description: "Print the plan only (no commit, tag or release)"
+        type: boolean
+        default: false
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: build, tag and publish
+    runs-on: macos-15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event_name == 'push' && github.ref || 'main' }}
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Quality gate
+        run: |
+          bun run typecheck
+          bun test tests/unit
+          bun run test:integration
+        env:
+          DMNGR_INTEGRATION: "1"
+
+      - name: Detect a recoverable release
+        if: github.event_name == 'workflow_dispatch' && inputs.dry_run != true
+        id: recover
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          current=$(python3 scripts/release.py current)
+          tag="v$current"
+          resume=false
+          if git tag --list "$tag" | grep -q . \
+            && [ "$(git rev-list -n1 "$tag")" = "$(git rev-parse HEAD)" ] \
+            && ! gh release view "$tag" >/dev/null 2>&1; then
+            resume=true
+            echo "found an unpublished tag $tag at HEAD; the run will resume it"
+          fi
+          echo "resume=$resume" >> "$GITHUB_OUTPUT"
+
+      - name: Prepare version and changelog
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          if [ "${{ inputs.dry_run }}" = "true" ]; then
+            python3 scripts/release.py prepare --bump "${{ inputs.bump }}" --dry-run
+          elif [ "${{ steps.recover.outputs.resume }}" = "true" ]; then
+            python3 scripts/release.py prepare --resume
+          else
+            python3 scripts/release.py prepare --bump "${{ inputs.bump }}"
+          fi
+
+      - name: Commit, tag and push
+        if: github.event_name == 'workflow_dispatch' && inputs.dry_run != true
+        run: |
+          version=$(python3 scripts/release.py current)
+          tag="v$version"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          if [ -n "$(git status --porcelain)" ]; then
+            git add package.json src/version.ts CHANGELOG.md
+            git commit -m "chore(release): $tag [skip ci]"
+            git push origin "HEAD:${{ github.event.repository.default_branch }}"
+          fi
+
+          if ! git tag --list "$tag" | grep -q .; then
+            git tag -a "$tag" -m "dmngr $version"
+            git push origin "$tag"
+          fi
+
+      - name: Resolve release metadata
+        id: meta
+        run: |
+          version=$(python3 scripts/release.py current)
+          tag="v$version"
+
+          if [ "${{ github.event_name }}" = "push" ] && [ "${{ github.ref_name }}" != "$tag" ]; then
+            echo "::error::tag ${{ github.ref_name }} does not match the version $tag in package.json/src/version.ts"
+            exit 1
+          fi
+
+          python3 scripts/release.py notes --version "$version" --output release-notes.md
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "--- release notes ---"
+          cat release-notes.md
+
+      - name: Build standalone binaries
+        run: |
+          bun run build:arm64
+          bun run build:x64
+
+      - name: Checksums
+        working-directory: dist
+        run: |
+          shasum -a 256 dmngr-darwin-arm64 > dmngr-darwin-arm64.sha256
+          shasum -a 256 dmngr-darwin-x64 > dmngr-darwin-x64.sha256
+          shasum -a 256 dmngr-darwin-arm64 dmngr-darwin-x64 > SHA256SUMS
+          cat SHA256SUMS
+
+      - name: Smoke test
+        run: |
+          ./dist/dmngr-darwin-arm64 --version
+          DMNGR_APP_SUPPORT_DIR="$RUNNER_TEMP/dmngr-smoke" ./dist/dmngr-darwin-arm64 list --json
+          file dist/dmngr-darwin-x64 | tee /dev/stderr | grep -q "x86_64"
+
+      - name: Publish GitHub Release
+        if: github.event_name == 'push' || inputs.dry_run != true
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.meta.outputs.tag }}
+          name: ${{ steps.meta.outputs.tag }}
+          body_path: release-notes.md
+          draft: false
+          generate_release_notes: false
+          files: |
+            dist/dmngr-darwin-arm64
+            dist/dmngr-darwin-x64
+            dist/dmngr-darwin-arm64.sha256
+            dist/dmngr-darwin-x64.sha256
+            dist/SHA256SUMS
