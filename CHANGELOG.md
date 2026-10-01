@@ -8,6 +8,8 @@ The human-facing usage guide stays in the pt-BR [`README.md`](./README.md).
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-10-01
+
 ### Added
 
 - English, user-facing `README.md` with badges, a plain-language overview and a complete installation

@@ -1,6 +1,6 @@
 {
   "name": "dmngr",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Instala e atualiza apps do macOS a partir de DMG/PKG (URL ou arquivo) sem abrir o Finder",
   "type": "module",
   "private": true,
