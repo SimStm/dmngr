@@ -1,0 +1,55 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: testes (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        # arm64 + Intel de verdade (as branches de arquitetura por máquina são exercitadas nos dois)
+        os: [macos-15, macos-15-intel]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Instalar dependências
+        run: bun install --frozen-lockfile
+
+      - name: Typecheck
+        run: bun run typecheck
+
+      - name: Testes unitários
+        run: bun test tests/unit
+
+      - name: Testes de integração (DMG/PKG reais)
+        run: bun run test:integration
+        env:
+          DMNGR_INTEGRATION: "1"
+
+      - name: Build standalone (arm64)
+        run: bun run build:arm64
+
+      - name: Build standalone (x64)
+        run: bun run build:x64
+
+      - name: Smoke test do binário nativo
+        run: |
+          ARCH=$([ "$(uname -m)" = "arm64" ] && echo arm64 || echo x64)
+          ./dist/dmngr-darwin-$ARCH --version
+          DMNGR_APP_SUPPORT_DIR="$RUNNER_TEMP/dmngr-smoke" ./dist/dmngr-darwin-$ARCH list --json
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dmngr-binaries-${{ matrix.os }}
+          path: dist/dmngr-darwin-*
+          if-no-files-found: error
