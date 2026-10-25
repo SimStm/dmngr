@@ -8,8 +8,26 @@ The human-facing usage guide stays in the pt-BR [`README.md`](./README.md).
 
 ## [Unreleased]
 
+### Added
+
+- `dmngr update-self` checks and applies updates from the public `SimStm/dmngr` GitHub Releases
+  (`--check`, `--dry-run`, `--yes`, `--json`), verifying the published `.sha256` before replacing the
+  installed binary.
+  → [`knowledge/changes/2026-10-25/risk-prompt-and-update-self/`](./knowledge/changes/2026-10-25/risk-prompt-and-update-self/README.md)
+
+### Changed
+
+- Interactive risk prompts (invalid signature, missing notarization, arch mismatch, …) print a labeled
+  block on stderr (app, check, result, details) with optional ANSI colors, instead of one dense line.
+  → [`knowledge/changes/2026-10-25/risk-prompt-and-update-self/`](./knowledge/changes/2026-10-25/risk-prompt-and-update-self/README.md)
+
 ### Fixed
 
+- `codesign --verify --strict` failure is no longer an unwaivable hard block: with interactive
+  confirmation or `--allow-unverified` the install can proceed, recording override `integrity` while
+  keeping `verification.integrityOk` false (covers apps like PhotoCraft that Gatekeeper accepts but
+  `--strict` rejects for FinderInfo/detritus). Without acceptance, exit 5 is unchanged.
+  → [`knowledge/changes/2026-10-25/codesign-strict-detritus-fallback/`](./knowledge/changes/2026-10-25/codesign-strict-detritus-fallback/README.md)
 - Pinning an asset for the wrong architecture (`--pin` with an arm64 build on an Intel Mac) now fails
   before the download with exit code 6 and a message naming the asset, instead of surfacing a signature
   error later. The pre-download architecture gate covers every asset path (explicit name, saved pattern,

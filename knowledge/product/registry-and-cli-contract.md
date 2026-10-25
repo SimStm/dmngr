@@ -44,13 +44,16 @@ Beyond the obvious identity/version fields, the following carry product meaning:
 
 ## CLI surface
 
-Commands: `install`, `update` (`<item>`, `--url`, `--all`), `check`, `list`, `info`, `doctor`.
+Commands: `install`, `update` (`<item>`, `--url`, `--all`), `update-self`, `check`, `list`, `info`,
+`doctor`.
 Common flags: `--json`, `--verbose`, `--quiet`, `--yes`, `--dry-run`, `--reinstall`, `--destination`,
-`--sha256`, `--keep-download`, `--allow-unverified`, `--allow-http`, `--allow-private-network`,
+`--sha256`, `--keep-download`, `--allow-unverified` (also waives `codesign --verify --strict` failure →
+override `integrity`), `--allow-http`, `--allow-private-network`,
 `--elevate`, `--app <id>`, `--url <url>`. GitHub/channel flags: `--prerelease` (`install`, `update`,
 `check`), `--pin` and `--latest` (`install`, `update`), `--allow-arch-mismatch` (`install`, `update`).
-`DMNGR_GITHUB_API_URL` redirects API calls (tests/enterprise); asset URLs still come from the API
-response and are validated by the network policy.
+`update-self` flags: `--check`, `--dry-run`, `--yes`. `DMNGR_GITHUB_API_URL` redirects API calls
+(tests/enterprise); asset URLs still come from the API response and are validated by the network
+policy.
 
 Behaviour contracts:
 

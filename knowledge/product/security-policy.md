@@ -11,9 +11,15 @@ tags: [product, security, signatures]
 
 | Check | Command | Effect |
 | --- | --- | --- |
-| Integrity | `codesign --verify --strict` on the **staged** copy | Failure **blocks** the installation (`SecurityError`, exit 5) |
-| Gatekeeper assessment | `spctl -a -vvv -t exec` | Rejection does **not** block by itself: it requires explicit acceptance |
+| Integrity | `codesign --verify --strict` on the **staged** copy | Failure requires **explicit** acceptance (override `integrity`); otherwise exit 5 |
+| Gatekeeper assessment | `spctl -a -vvv -t exec` | Rejection does **not** block by itself: it requires explicit acceptance (`unverified`) |
 | Metadata | `codesign -dv --verbose=4` (`Signature size=`, `Authority=`, `TeamIdentifier=`) | Recorded in the item (`signed`, `notarized`, `teamId`) |
+
+When integrity is waived, `verification.integrityOk` stays `false` and `verification.overrides`
+includes `integrity` — consent is recorded without rewriting the assessment. dmngr does **not**
+strip xattrs or otherwise mutate the artifact to make `--strict` pass. Some legitimate notarized
+apps (e.g. with leftover `com.apple.FinderInfo`) fail `--strict` while `spctl` still accepts them;
+they need the same explicit acceptance as any other integrity failure.
 
 `codesign -dv` output varies ("`Signature=adhoc`" vs "`Signature size=…`"), so detection looks for
 both forms; a Developer ID app must not be reported as unsigned.
@@ -22,19 +28,19 @@ For PKG, the equivalents are `pkgutil --check-signature` (text status) and `spct
 
 ## Explicit-risk overrides
 
-Four situations require acceptance that automation must not grant silently:
+Situations that require acceptance that automation must not grant silently:
 
-1. No Apple-verified signature / notarization.
-2. PKG with install scripts running as root.
-3. Bundle-id change, architecture change, or a weak identity (no `CFBundleIdentifier`, no package
-   identifier).
-4. An app without a native build for this machine (x64 on Apple Silicon, i.e. Rosetta 2), checked before
-   the download from the asset name and again after it from `lipo -archs`.
+1. Invalid code signature (`codesign --verify --strict` failed) — override `integrity`.
+2. No Apple-verified signature / notarization — override `unverified`.
+3. PKG with install scripts running as root — override `pkg-scripts`.
+4. Bundle-id change, architecture change, or a weak identity (no `CFBundleIdentifier`, no package
+   identifier) — `identity-change` / `arch-change` / `weak-identity`.
+5. An app without a native build for this machine (x64 on Apple Silicon, i.e. Rosetta 2), checked before
+   the download from the asset name and again after it from `lipo -archs` — `arch-mismatch`.
 
 Each one prompts interactively. In non-interactive mode `--allow-unverified` accepts all of them, and
-`--allow-arch-mismatch` accepts only item 4. Every accepted item records the override name in
-`verification.overrides` (`unverified`, `pkg-scripts`, `identity-change`, `arch-change`,
-`weak-identity`, `arch-mismatch`) so `dmngr info` and `dmngr doctor` can surface it later. `--yes` never
+`--allow-arch-mismatch` accepts only item 5. Every accepted item records the override name in
+`verification.overrides` so `dmngr info` and `dmngr doctor` can surface it later. `--yes` never
 grants these; `--json` never prompts (exit code 3 for choices, 5 for unaccepted risks).
 
 One case cannot be waived: an arm64-only app on an Intel Mac is blocked with no override, because it

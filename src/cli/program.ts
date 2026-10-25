@@ -3,8 +3,11 @@ import { installSignalHandlers } from "../core/cleanup.ts";
 import { EXIT_CODES, UsageError, errorPayload, toDmngrError } from "../core/errors.ts";
 import { configureUi, ui } from "../core/output.ts";
 import {
+  canPrompt,
   createCtx,
   defaultOperationOptions,
+  maxDownloadBytes,
+  networkPolicy,
   type GlobalOptions,
   type OperationOptions,
 } from "../core/ops/context.ts";
@@ -13,6 +16,7 @@ import { runDoctor, summarizeDoctor } from "../core/ops/doctor.ts";
 import { renderReport, reportToJson, runInstall } from "../core/ops/install.ts";
 import { readLiveItemInfo } from "../core/ops/live.ts";
 import { runUpdate } from "../core/ops/update.ts";
+import { runUpdateSelf } from "../core/self.ts";
 import { resolveItem, suggestItems } from "../core/registry/resolve.ts";
 import { loadRegistry } from "../core/registry/store.ts";
 import type { RegistryItem } from "../core/registry/schema.ts";
@@ -176,7 +180,7 @@ function buildProgram(): Command {
     .option("--keep-download", "mantém o arquivo baixado em vez de apagar")
     .option(
       "--allow-unverified",
-      "aceita app não notarizado, troca de identidade/arquitetura, arquitetura sem build nativo e PKG com scripts (fica registrado no item)",
+      "aceita assinatura inválida (codesign), app não notarizado, troca de identidade/arquitetura, arquitetura sem build nativo e PKG com scripts (fica registrado no item)",
     )
     .option("--prerelease", "usa a release publicada mais recente, incluindo pré-lançamentos (canal prerelease)")
     .option("--pin", "usa exatamente a versão fixada na URL, sem perguntar (exige …/releases/download/<tag>/…)")
@@ -223,7 +227,7 @@ function buildProgram(): Command {
     .option("--keep-download", "mantém o arquivo baixado em vez de apagar")
     .option(
       "--allow-unverified",
-      "aceita app não notarizado, troca de identidade/arquitetura, arquitetura sem build nativo e PKG com scripts (fica registrado no item)",
+      "aceita assinatura inválida (codesign), app não notarizado, troca de identidade/arquitetura, arquitetura sem build nativo e PKG com scripts (fica registrado no item)",
     )
     .option("--prerelease", "usa/seguir o canal de pré-lançamentos (release publicada mais recente)")
     .option("--pin", "mantém a versão fixada pela URL informada (exige …/releases/download/<tag>/…)")
@@ -275,5 +279,69 @@ function buildProgram(): Command {
     ui.data({ schemaVersion: 1, summary: summarizeDoctor(issues), issues }, () => renderDoctor(issues));
   });
 
+  addCommonFlags(
+    program
+      .command("update-self")
+      .description("verifica e atualiza o próprio dmngr a partir das releases públicas no GitHub"),
+  )
+    .option("--check", "apenas informa se há versão nova (não baixa)")
+    .option("--dry-run", "mostra o plano sem baixar nem substituir o binário")
+    .action(async (_options: unknown, command: Command) => {
+      const options = operationOptions(program, command, {
+        dryRun: Boolean(command.opts().dryRun),
+      });
+      applyUi(options);
+      const ctx = await createCtx(options);
+      const result = await runUpdateSelf({
+        github: ctx.github,
+        policy: networkPolicy(ctx),
+        maxBytes: maxDownloadBytes(ctx),
+        checkOnly: Boolean(command.opts().check),
+        dryRun: options.dryRun,
+        yes: options.yes,
+        canPrompt: canPrompt(ctx),
+      });
+      ui.data(
+        {
+          schemaVersion: 1,
+          command: "update-self",
+          action: result.action,
+          currentVersion: result.previousVersion,
+          latestVersion: result.plan.latestVersion,
+          latestTag: result.plan.latestTag,
+          status: result.plan.status,
+          assetName: result.plan.assetName,
+          installPath: result.installPath,
+          notes: result.notes,
+        },
+        () => {
+          const lines = [
+            `dmngr ${result.previousVersion}`,
+            `  status: ${describeSelfStatus(result.plan.status)}`,
+            `  remota: ${result.plan.latestTag}${result.plan.latestVersion === null ? "" : ` (${result.plan.latestVersion})`}`,
+            `  asset: ${result.plan.assetName}`,
+            `  binário: ${result.installPath}`,
+          ];
+          if (result.action === "updated") {
+            lines.push(`  resultado: atualizado → ${result.installedVersion}`);
+          } else if (result.action === "planned") {
+            lines.push("  resultado: dry-run (nada alterado)");
+          }
+          process.stdout.write(`${lines.join("\n")}\n`);
+        },
+      );
+    });
+
   return program;
+}
+
+function describeSelfStatus(status: string): string {
+  switch (status) {
+    case "up_to_date":
+      return "já atualizado";
+    case "update_available":
+      return "atualização disponível";
+    default:
+      return "desconhecido";
+  }
 }

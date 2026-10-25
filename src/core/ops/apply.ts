@@ -1,6 +1,6 @@
 import { basename, dirname, extname, join } from "node:path";
 import { resolveDestinationDirFor } from "../config.ts";
-import { AmbiguityError, InstallError, SecurityError, UsageError } from "../errors.ts";
+import { AmbiguityError, InstallError, UsageError } from "../errors.ts";
 import { pathExists } from "../fsx.ts";
 import { detectFormat } from "../input/format.ts";
 import {
@@ -21,7 +21,14 @@ import type { RegistryItem, SourceInfo, VerificationInfo, VersionEvidence } from
 import { loadRegistry, uniqueItemId, updateRegistry, upsertItem } from "../registry/store.ts";
 import { normalizeTag, tagMapsToVersion } from "../versioning.ts";
 import { canPrompt, effectiveElevate, type Ctx } from "./context.ts";
-import { confirmDecision, requireArchAcceptance, requireOrNote, type RiskContext } from "./risk.ts";
+import {
+  confirmDecision,
+  requireArchAcceptance,
+  requireOrNote,
+  type RiskContext,
+  type RiskNotice,
+  type RiskRow,
+} from "./risk.ts";
 import {
   archsCompatibility,
   classifyArchList,
@@ -241,13 +248,10 @@ async function applyAppBundle(params: ApplyParams, appPath: string): Promise<App
       const result = await assessAppSignature(stagedApp);
       assessment = result;
       if (!result.integrityOk) {
-        throw new SecurityError(`a assinatura de ${displayName} é inválida (codesign --verify falhou)`, {
-          hint: "o app pode ter sido adulterado; nada foi instalado",
-          details: { assessment: result.details },
-        });
+        await requireOrNote(risk, signatureRiskNotice(displayName, result, "integrity"));
       }
       if (!result.notarized) {
-        await requireOrNote(risk, `${displayName} não tem assinatura notarizada pela Apple (${result.details})`, "unverified");
+        await requireOrNote(risk, signatureRiskNotice(displayName, result, "unverified"));
       }
     },
   });
@@ -375,13 +379,25 @@ async function applyPkgArtifact(params: ApplyParams, pkgPath: string): Promise<A
   }
 
   if (!pkg.signature.signed) {
-    await requireOrNote(risk, `${displayName} não tem assinatura verificável (${pkg.signature.statusSummary ?? "sem status"})`, "unverified");
+    await requireOrNote(risk, {
+      override: "unverified",
+      headline: "sem assinatura verificável",
+      app: displayName,
+      check: "pkgutil --check-signature",
+      outcome: "não assinado",
+      rows: [{ label: "status", value: pkg.signature.statusSummary ?? "sem status" }],
+      flatMessage: `${displayName} não tem assinatura verificável (${pkg.signature.statusSummary ?? "sem status"})`,
+    });
   } else if (!pkg.signature.notarized) {
-    await requireOrNote(
-      risk,
-      `${displayName} está assinado (${pkg.signature.authority ?? "autoridade desconhecida"}) mas não é notarizado`,
-      "unverified",
-    );
+    await requireOrNote(risk, {
+      override: "unverified",
+      headline: "assinado mas não notarizado",
+      app: displayName,
+      check: "notarização (spctl)",
+      outcome: "ausente",
+      rows: [{ label: "autoridade", value: pkg.signature.authority ?? "desconhecida" }],
+      flatMessage: `${displayName} está assinado (${pkg.signature.authority ?? "autoridade desconhecida"}) mas não é notarizado`,
+    });
   }
 
   if (ctx.opts.dryRun) {
@@ -618,6 +634,41 @@ function verificationFrom(assessment: SignatureAssessment | null, overrides: str
     notarized: assessment.notarized,
     teamId: assessment.teamId,
     overrides,
+  };
+}
+
+function signatureRiskNotice(
+  displayName: string,
+  assessment: SignatureAssessment,
+  kind: "integrity" | "unverified",
+): RiskNotice {
+  const rows: RiskRow[] = [];
+  if (assessment.authority) rows.push({ label: "autoridade", value: assessment.authority });
+  if (assessment.teamId) rows.push({ label: "team", value: assessment.teamId });
+  rows.push({
+    label: "spctl",
+    value: assessment.notarized ? "aceito (notarizado)" : assessment.signed ? "rejeitado / sem notarização" : "rejeitado",
+  });
+
+  if (kind === "integrity") {
+    return {
+      override: "integrity",
+      headline: "assinatura inválida",
+      app: displayName,
+      check: "integridade (codesign --verify --strict)",
+      outcome: "falhou",
+      rows,
+      flatMessage: `a assinatura de ${displayName} é inválida (codesign --verify falhou; ${assessment.details})`,
+    };
+  }
+  return {
+    override: "unverified",
+    headline: "sem notarização da Apple",
+    app: displayName,
+    check: "Gatekeeper / notarização (spctl)",
+    outcome: "não notarizado",
+    rows,
+    flatMessage: `${displayName} não tem assinatura notarizada pela Apple (${assessment.details})`,
   };
 }
 

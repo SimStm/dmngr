@@ -58,7 +58,8 @@ UDIF DMG (`encrcdsa` = encrypted, unsupported), `PK\x03\x04` = ZIP (unsupported 
    slices (`lipo -archs`), catching names that lied.
 5. `installAppBundle()` (`src/core/install/app-swap.ts`) copies with `ditto` into
    `.dmngr-staging-<rand>` **inside the destination directory** (same filesystem), runs the
-   `beforeCommit` verification hook (identity re-read, `codesign --verify --strict`, `spctl`), moves
+   `beforeCommit` verification hook (identity re-read, `codesign --verify --strict` / `spctl`, with
+   explicit acceptance for integrity or missing notarization), moves
    any existing app to `.dmngr-backup-<rand>`, renames staging into place, and removes the backup.
    On failure the previous app is restored; if restoration itself fails, both paths are reported and
    the staging directory is preserved.

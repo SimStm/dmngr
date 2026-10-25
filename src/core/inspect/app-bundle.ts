@@ -81,9 +81,9 @@ export async function isAppRunning(appPath: string, executable: string | null): 
 }
 
 /**
- * Política em duas camadas:
- *  - codesign --verify --strict (integridade) falhou  → bloqueia
- *  - sem assinatura Apple/notarização (spctl)         → avisa e pede confirmação
+ * Política em duas camadas (o aceite fica em apply/risk, não aqui):
+ *  - codesign --verify --strict (integridade) falhou  → integrityOk=false
+ *  - sem assinatura Apple/notarização (spctl)         → notarized=false
  */
 export async function assessAppSignature(path: string): Promise<SignatureAssessment> {
   const display = await run(["codesign", "-dv", "--verbose=4", path]);

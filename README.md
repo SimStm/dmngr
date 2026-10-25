@@ -113,16 +113,20 @@ dmngr --help
 
 ### Update dmngr itself
 
-dmngr does not manage its own installation. To update, re-run the commands from
-[Download and verify](#download-and-verify) and replace the binary with the new one:
+If you installed the compiled binary (not `bun run` from source):
 
 ```bash
-mkdir -p ~/.local/bin
-chmod +x "dmngr-darwin-$ARCH"
-mv -f "dmngr-darwin-$ARCH" ~/.local/bin/dmngr
+dmngr update-self --check    # see whether a newer GitHub release exists
+dmngr update-self            # download, verify sha256, replace this binary
+dmngr update-self --yes      # same, non-interactive
 ```
 
-(With Option B, use `sudo mv -f "dmngr-darwin-$ARCH" /usr/local/bin/dmngr` instead.)
+`update-self` talks to the public
+[SimStm/dmngr](https://github.com/SimStm/dmngr/releases/latest) releases, picks
+`dmngr-darwin-arm64` or `dmngr-darwin-x64` for your Mac, and refuses to run under the
+`bun` runtime. The install directory must be writable (e.g. `~/.local/bin`).
+
+Manual fallback: re-run [Download and verify](#download-and-verify) and replace the binary.
 
 ### Uninstall
 
@@ -180,8 +184,9 @@ newer file for an app you already have counts as an update.
 ## Staying safe
 
 - **You always get asked** before something irreversible happens: replacing an app that is different
-  from the one you are installing, installing something without a proper Apple signature, replacing an
-  app that runs only through Rosetta, or a package that runs installer scripts as administrator.
+  from the one you are installing, installing something whose signature check failed or lacks a proper
+  Apple signature, replacing an app that runs only through Rosetta, or a package that runs installer
+  scripts as administrator.
 - **Uncertainty is stated, never hidden.** If dmngr cannot tell what version a link offers, it says so
   and asks, instead of pretending everything is fine.
 - **Nothing is deleted on failure.** If an installation fails half-way, the previous app is put back and

@@ -39,7 +39,15 @@ Releases run in `.github/workflows/release.yml`, triggered by `workflow_dispatch
    section via `python3 scripts/release.py notes --version X.Y.Z`.
 
 Asset names are stable and must not change: `dmngr-darwin-arm64`, `dmngr-darwin-x64`. The README
-installation commands depend on them, together with the `releases/latest/download/` URL shape.
+installation commands and `dmngr update-self` depend on them, together with the
+`releases/latest/download/` URL shape and sibling `.sha256` checksum assets.
+
+## Self-update
+
+`dmngr update-self` (compiled binary only) calls `GET /repos/SimStm/dmngr/releases/latest`, compares
+the release tag to the embedded `VERSION`, downloads the matching `dmngr-darwin-<arch>` asset, verifies
+it against the published `.sha256` (or the asset `digest`), and replaces `process.execPath` in place
+when the install directory is writable. Dev invocations under `bun` are rejected with a usage error.
 
 ## Guards (fail closed, change nothing)
 
