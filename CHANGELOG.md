@@ -8,6 +8,8 @@ The human-facing usage guide stays in the pt-BR [`README.md`](./README.md).
 
 ## [Unreleased]
 
+## [0.3.1] - 2026-10-26
+
 ### Added
 
 - `dmngr uninstall` (aliases `remove`, `rm`) deletes the managed `.app` at the registered
