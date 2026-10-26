@@ -89,6 +89,13 @@ announced before installation, and recorded in the item as the `pkg-scripts` ove
 
 ## 6. Persist and finalize
 
+## Uninstall
+
+`dmngr uninstall|remove|rm <item>` resolves the registry item, optionally confirms, deletes the
+registered `.app` path(s) after an identity check (and refuses if the app is running), then removes
+the item under the registry lock. `--keep-files` skips the disk delete. PKG items also try
+`pkgutil --forget` without elevation and warn that leftover payload may remain.
+
 The registry is updated under lock only after success, in `src/core/ops/apply.ts`. `artifact.sha256`
 is the hash of the downloaded file, `versionEvidence` says where the version came from, and
 `previousVersion` records the version that was replaced. Temp directories are removed unless

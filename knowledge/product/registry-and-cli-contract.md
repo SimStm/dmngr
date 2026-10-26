@@ -44,8 +44,8 @@ Beyond the obvious identity/version fields, the following carry product meaning:
 
 ## CLI surface
 
-Commands: `install`, `update` (`<item>`, `--url`, `--all`), `update-self`, `check`, `list`, `info`,
-`doctor`.
+Commands: `install`, `update` (`<item>`, `--url`, `--all`), `uninstall` (aliases `remove`, `rm`),
+`update-self`, `check`, `list`, `info`, `doctor`.
 Common flags: `--json`, `--verbose`, `--quiet`, `--yes`, `--dry-run`, `--reinstall`, `--destination`,
 `--sha256`, `--keep-download`, `--allow-unverified` (also waives `codesign --verify --strict` failure →
 override `integrity`), `--allow-http`, `--allow-private-network`,

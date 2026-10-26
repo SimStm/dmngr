@@ -23,8 +23,11 @@ Current, deliberate boundaries — each one has a reason, not an oversight:
 - **Encrypted DMGs are rejected.**
 - **No `import` of pre-existing apps.** Only items installed by dmngr appear in the registry.
 - **Weak-identity apps** (no `CFBundleIdentifier`) are registered but never updated automatically.
-- **No generic rollback / no uninstall.** Restoring a replaced `.app` happens only within the same
-  installation attempt (staging → backup → rename).
+- **No generic version rollback.** Restoring a replaced `.app` happens only within the same
+  installation attempt (staging → backup → rename). Uninstall (`uninstall`/`remove`/`rm`) deletes the
+  registered path and drops the registry item; it is not a roll-back to a previous version.
+- **PKG uninstall is best-effort.** Observed `.app` bundles are removed and `pkgutil --forget` is
+  attempted without elevation; installer scripts and other payload files may remain.
 - **Downgrades are refused** (no `--allow-downgrade` yet).
 - **`update --all` requires an interactive confirmation** (aggregated) and skips items whose update
   cannot be proven.

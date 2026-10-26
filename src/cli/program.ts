@@ -16,6 +16,7 @@ import { runDoctor, summarizeDoctor } from "../core/ops/doctor.ts";
 import { renderReport, reportToJson, runInstall } from "../core/ops/install.ts";
 import { readLiveItemInfo } from "../core/ops/live.ts";
 import { runUpdate } from "../core/ops/update.ts";
+import { renderUninstallResult, runUninstall, uninstallResultToJson } from "../core/ops/uninstall.ts";
 import { runUpdateSelf } from "../core/self.ts";
 import { resolveItem, suggestItems } from "../core/registry/resolve.ts";
 import { loadRegistry } from "../core/registry/store.ts";
@@ -278,6 +279,27 @@ function buildProgram(): Command {
     const issues = await runDoctor();
     ui.data({ schemaVersion: 1, summary: summarizeDoctor(issues), issues }, () => renderDoctor(issues));
   });
+
+  addCommonFlags(
+    program
+      .command("uninstall")
+      .aliases(["remove", "rm"])
+      .description("remove um app gerenciado do disco (caminho registrado) e do registro")
+      .argument("<item>", "id, nome ou alias do item"),
+  )
+    .option("--dry-run", "mostra o plano sem apagar nada")
+    .option("--keep-files", "só remove do registro; mantém o .app no disco")
+    .action(async (query: string, _options: unknown, command: Command) => {
+      const options = operationOptions(program, command, {
+        dryRun: Boolean(command.opts().dryRun),
+      });
+      applyUi(options);
+      const ctx = await createCtx(options);
+      const result = await runUninstall(ctx, query, {
+        keepFiles: Boolean(command.opts().keepFiles),
+      });
+      ui.data(uninstallResultToJson(result), () => renderUninstallResult(result));
+    });
 
   addCommonFlags(
     program

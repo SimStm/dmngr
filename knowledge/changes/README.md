@@ -34,6 +34,7 @@ Rules:
 
 | Bundle | Purpose |
 | --- | --- |
+| [`2026-10-25/uninstall-command`](./2026-10-25/uninstall-command/README.md) | `uninstall` / `remove` / `rm` — delete registered app path + registry entry |
 | [`2026-10-25/risk-prompt-and-update-self`](./2026-10-25/risk-prompt-and-update-self/README.md) | Structured risk prompts + `dmngr update-self` from public GitHub Releases |
 | [`2026-10-25/codesign-strict-detritus-fallback`](./2026-10-25/codesign-strict-detritus-fallback/README.md) | Integrity: waive `codesign --verify --strict` failure via `--allow-unverified` (`integrity`) |
 | [`2026-09-29/dmngr-mvp`](./2026-09-29/dmngr-mvp/README.md) | Baseline: install/update of DMG and PKG with a local registry (retroactive documentation) |

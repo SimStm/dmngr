@@ -162,6 +162,12 @@ dmngr check
 # update one app, or everything that has a confirmed update
 dmngr update 'com.example.editor'
 dmngr update --all
+
+# remove a managed app from disk (registered path) and from the list
+dmngr uninstall 'com.example.editor'
+dmngr remove Stats          # same command
+dmngr rm Stats --yes        # non-interactive
+dmngr rm Stats --keep-files # forget tracking only; leave the .app on disk
 ```
 
 Useful flags for any command: `--dry-run` (show what would happen), `--yes` (skip the questions that

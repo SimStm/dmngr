@@ -8,6 +8,13 @@ The human-facing usage guide stays in the pt-BR [`README.md`](./README.md).
 
 ## [Unreleased]
 
+### Added
+
+- `dmngr uninstall` (aliases `remove`, `rm`) deletes the managed `.app` at the registered
+  `installedPath` (and PKG `observedApps` when present), then drops the item from the registry.
+  Confirms unless `--yes`; `--keep-files` only forgets the registry entry; `--dry-run` plans only.
+  → [`knowledge/changes/2026-10-25/uninstall-command/`](./knowledge/changes/2026-10-25/uninstall-command/README.md)
+
 ## [0.3.0] - 2026-10-26
 
 ### Added
